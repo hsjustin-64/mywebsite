@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 텍스트 검색기</title>
+    <script src="db.js"></script>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background-color: #f9f9f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; color: #333; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; background-color: #fff; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        input[type="text"] { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
+        button { padding: 10px 15px; background-color: #ffe812; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #f5d700; }
+        .result-list { list-style: none; padding: 0; max-height: 200px; overflow-y: auto; border: 1px solid #eee; }
+        .result-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }
+        .result-item:hover { background-color: #f0f0f0; }
+        #preview-section { display: none; text-align: center; }
+        #image-preview { max-width: 100%; max-height: 400px; border: 1px solid #ccc; margin-bottom: 15px; }
+        .error { color: red; font-size: 14px; }
+        .guide-box { background-color: #eef8ff; border: 1px solid #cce5ff; padding: 10px; border-radius: 4px; margin-top: 15px; color: #0056b3; font-size: 14px; text-align: left; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔍 이미지 텍스트 검색기</h1>
+    <p id="status" style="color: blue; font-weight: bold;"></p>
+
+    <div class="section">
+        <label>검색할 단어 입력</label>
+        <input type="text" id="searchInput" placeholder="검색어를 입력하고 Enter를 누르세요">
+        <button id="searchBtn">검색</button>
+    </div>
+
+    <div class="section" id="results-section" style="display: none;">
+        <label>검색 결과</label>
+        <ul class="result-list" id="resultList"></ul>
+    </div>
+
+    <div class="section" id="preview-section">
+        <label>이미지 미리보기</label>
+        <img id="image-preview" src="" alt="">
+        
+        <div class="guide-box">
+            <strong>💡 카카오톡으로 이미지 보내는 방법 (보안 우회)</strong><br>
+            1. 이미지 위에서 <strong>[우클릭] ➔ [이미지 복사]</strong> 후 카톡에 붙여넣기 (Ctrl+V)<br>
+            2. 또는 이미지를 <strong>클릭한 채로 카톡 창에 끌어다 놓기</strong>
+        </div>
+    </div>
+</div>
+
+<script>
+    const IGNORE_PATTERNS = [
+        "죄송하지만, 이미지를 분석할 수 없습니다.",
+        "죄송하지만, 이미지를 처리할 수 없습니다.",
+        "인식된 텍스트가 없습니다.",
+        "인식할 수 있는 텍스트가 없습니다."
+    ];
+
+    const statusEl = document.getElementById('status');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const resultList = document.getElementById('resultList');
+    const resultsSection = document.getElementById('results-section');
+    const previewSection = document.getElementById('preview-section');
+    const imagePreview = document.getElementById('image-preview');
+
+    if (typeof imageTextDB !== 'undefined') {
+        statusEl.innerText = `✔ DB 로드 완료! (총 ${Object.keys(imageTextDB).length}건)`;
+    } else {
+        statusEl.innerText = "오류: db.js 파일을 찾을 수 없거나 형식이 잘못되었습니다.";
+        statusEl.style.color = 'red';
+        searchInput.disabled = true;
+        searchBtn.disabled = true;
+    }
+
+    function isIgnoredText(text) {
+        if (!text) return true;
+        for (let pat of IGNORE_PATTERNS) {
+            if (text.trim().startsWith(pat)) return true;
+        }
+        return false;
+    }
+
+    function searchImages() {
+        const keyword = searchInput.value.trim();
+        if (!keyword) return;
+
+        resultList.innerHTML = '';
+        previewSection.style.display = 'none';
+        const results = [];
+
+        for (const [filename, text] of Object.entries(imageTextDB)) {
+            if (typeof text !== 'string') continue;
+            if (isIgnoredText(text)) continue;
+            if (text.includes(keyword)) {
+                results.push({ filename, text });
+            }
+        }
+
+        if (results.length === 0) {
+            resultList.innerHTML = '<li class="result-item error">검색 결과가 없습니다.</li>';
+        } else {
+            results.forEach((res, index) => {
+                const li = document.createElement('li');
+                li.className = 'result-item';
+                let previewText = res.text.replace(/\n/g, " ");
+                if (previewText.length > 80) previewText = previewText.substring(0, 80) + "...";
+                
+                li.innerText = `${index + 1}. ${res.filename} | "${previewText}"`;
+                li.onclick = () => showImage(res.filename);
+                resultList.appendChild(li);
+            });
+        }
+        resultsSection.style.display = 'block';
+
+        if (results.length === 1) {
+            showImage(results[0].filename);
+        }
+    }
+
+    searchBtn.addEventListener('click', searchImages);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') searchImages();
+    });
+
+    // (기존 showImage 함수를 이걸로 교체하세요)
+    function showImage(filename) {
+        // 상대 경로 설정
+        const testPath = '../アニメ/' + encodeURIComponent(filename);
+        
+        // 1. 이미지 로딩에 성공했을 때
+        imagePreview.onload = function() {
+            alert("🟢 접근 성공!\n\n이미지를 정상적으로 불러왔습니다.\n(이제 우클릭 복사나 드래그 앤 드롭이 가능해야 합니다)");
+        };
+        
+        // 2. 이미지 로딩에 실패했을 때 (경로가 틀림)
+        imagePreview.onerror = function() {
+            // 브라우저가 최종적으로 계산한 절대 경로를 가져옵니다.
+            const failedUrl = imagePreview.src;
+            
+            alert("🔴 접근 실패!\n\n이미지를 찾을 수 없습니다.\n브라우저가 시도한 경로는 다음과 같습니다:\n\n" + failedUrl + "\n\n이 경로가 실제 파일이 있는 위치와 일치하는지 확인해 주세요.");
+        };
+        
+        // 이미지 경로 적용
+        imagePreview.src = testPath;
+        previewSection.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
