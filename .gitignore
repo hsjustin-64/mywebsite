@@ -1,2 +1,5 @@
 # Local Netlify folder
 .netlify
+
+# 구글 API 키 비밀 금고 숨기기
+.env

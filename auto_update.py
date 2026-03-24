@@ -3,12 +3,16 @@ import json
 import re
 import time
 import subprocess
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from PIL import Image
 
-# ⭐ 1. 본인의 API 키를 여기에 쏙 넣어주세요!
-GOOGLE_API_KEY = "AIzaSyDl1jSJX73S0KzOeObNbbwZb5TY_0iWP50"
+# 🔒 비밀 금고(.env) 열기!
+load_dotenv() 
+
+# ⭐ 1. 코드에 직접 적지 않고, 비밀 금고에서 열쇠를 꺼내옵니다.
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY") 
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
 # 📂 2. 폴더 경로 설정 (자신의 컴퓨터 환경에 맞게 되어있는지 확인)
