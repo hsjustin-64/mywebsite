@@ -64,6 +64,23 @@ for index, img_name in enumerate(new_images, 1):
     img_path = os.path.join(anime_folder, img_name)
     success = False
     
+    # ==========================================
+    # 👇 여기서부터 아래 10줄을 새로 추가해 주세요!
+    # ==========================================
+    try:
+        with Image.open(img_path) as img:
+            # 1. 사진 가로 길이가 1200 픽셀보다 크면 적당히 줄이기
+            if img.width > 1200:
+                ratio = 1200 / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((1200, new_height), Image.Resampling.LANCZOS)
+            
+            # 2. 눈에 안 띄게 화질을 85%로 압축해서 원본 파일에 덮어쓰기
+            img.save(img_path, optimize=True, quality=85)
+    except Exception as e:
+        pass # 만약 압축에 실패하더라도 멈추지 않고 원본으로 그냥 진행!
+    # ==========================================
+    
     while not success:
         try:
             print(f"[{index}/{len(new_images)}] 👀 읽는 중: {img_name} ... ", end="", flush=True)
