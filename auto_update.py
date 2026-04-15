@@ -88,7 +88,7 @@ for index, img_name in enumerate(new_images, 1):
             prompt = "이 애니메이션 화면에 있는 자막 텍스트만 추출해 줘. 자막이 없으면 '자막 없음'이라고 해줘. 부가 설명은 하지 마."
             
             response = client.models.generate_content(
-                model='gemini-2.5-flash-lite', 
+                model='gemini-2.5-flash', 
                 contents=[prompt, img],
                 config=types.GenerateContentConfig(safety_settings=safety_settings)
             )
